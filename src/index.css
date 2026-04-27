@@ -1,0 +1,32 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Helvetica Neue", "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-serif: "Georgia", serif;
+  --color-canvas: #FDFCF0;
+  --color-sage: #D1D9CF;
+  --color-cream-yellow: #F3EAC2;
+  --color-peach: #F9E2D2;
+  --color-burnt-orange: #D97706;
+}
+
+@layer base {
+  body {
+    @apply bg-canvas text-stone-900 overflow-hidden font-sans;
+  }
+}
+
+.canvas-grid {
+  background-image: radial-gradient(#D1D9CF 1px, transparent 1px);
+  background-size: 30px 30px;
+}
+
+/* Custom shadow for sticky notes from design */
+.sticky-shadow {
+  box-shadow: 4px 6px 12px rgba(0, 0, 0, 0.08);
+}
+
+.organic-radius {
+  border-radius: 2px 4px 3px 6px / 6px 3px 4px 2px;
+}

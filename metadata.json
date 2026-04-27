@@ -1,0 +1,6 @@
+{
+  "name": "Mura Whiteboard",
+  "description": "A high-end, minimalist collaborative whiteboard with organic sticky notes and fluid canvas interactions.",
+  "requestFramePermissions": ["microphone"],
+  "majorCapabilities": []
+}
