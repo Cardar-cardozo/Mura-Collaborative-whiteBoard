@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Crown, User } from 'lucide-react';
+import { Crown } from 'lucide-react';
 import { Participant } from '../types';
 
 interface CollaboratorListProps {

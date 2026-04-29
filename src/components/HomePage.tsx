@@ -1,28 +1,42 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'motion/react';
-import { Users, User, Layout, Link as LinkIcon, Check, ArrowRight, Share2 } from 'lucide-react';
+import { User, Layout, Link as LinkIcon, Check, ArrowRight, Share2 } from 'lucide-react';
 
-interface HomePageProps {
-  onStart: (data: { leaderName: string; groupName: string; count: number }) => void;
-}
-
-const HomePage: React.FC<HomePageProps> = ({ onStart }) => {
+const HomePage: React.FC = () => {
+  const navigate = useNavigate();
   const [step, setStep] = useState<'form' | 'success'>('form');
   const [formData, setFormData] = useState({
     leaderName: '',
     groupName: '',
     count: 2
   });
+  const [createdBoardId, setCreatedBoardId] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setStep('success');
+    setIsSubmitting(true);
+    try {
+      // Create the board via backend API
+      const { boardService } = await import('../api/board.service');
+      const board = await boardService.createBoard(formData.groupName, formData.leaderName);
+      setCreatedBoardId(board._id);
+      setStep('success');
+    } catch (error) {
+      console.error('Failed to create board:', error);
+      alert('Failed to create workspace. Please try again.');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
-  const shareLink = window.location.href;
+  const shareLink = createdBoardId ? `${window.location.origin}/join/${createdBoardId}` : '';
 
   const handleCopyLink = () => {
+    if (!shareLink) return;
     navigator.clipboard.writeText(shareLink);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
@@ -101,9 +115,10 @@ const HomePage: React.FC<HomePageProps> = ({ onStart }) => {
 
                 <button
                   type="submit"
-                  className="w-full py-4 bg-stone-900 text-white rounded-2xl font-bold text-sm tracking-wide flex items-center justify-center gap-2 hover:translate-y-[-2px] active:translate-y-0 transition-all shadow-lg shadow-stone-900/10"
+                  disabled={isSubmitting}
+                  className="w-full py-4 bg-stone-900 text-white rounded-2xl font-bold text-sm tracking-wide flex items-center justify-center gap-2 hover:translate-y-[-2px] active:translate-y-0 transition-all shadow-lg shadow-stone-900/10 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0"
                 >
-                  Create Canvas <ArrowRight className="w-4 h-4" />
+                  {isSubmitting ? 'Creating Canvas...' : 'Create Canvas'} <ArrowRight className="w-4 h-4" />
                 </button>
               </form>
             </motion.div>
@@ -140,14 +155,14 @@ const HomePage: React.FC<HomePageProps> = ({ onStart }) => {
 
                 <div className="grid grid-cols-2 gap-3">
                   <button 
-                     onClick={() => onStart(formData)}
+                     onClick={() => createdBoardId && navigate(`/workspace/${createdBoardId}?participant=${encodeURIComponent(formData.leaderName)}`)}
                      className="py-4 bg-stone-900 text-white rounded-2xl font-bold text-xs tracking-widest uppercase hover:opacity-90 transition-opacity"
                   >
                     Enter Canvas
                   </button>
                   <button 
                     onClick={() => {
-                        if (navigator.share) {
+                        if (navigator.share && shareLink) {
                             navigator.share({ title: formData.groupName, url: shareLink });
                         } else {
                             handleCopyLink();

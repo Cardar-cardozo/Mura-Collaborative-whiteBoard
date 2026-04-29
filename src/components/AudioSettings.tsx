@@ -1,13 +1,16 @@
 import React from 'react';
-import { Mic, MicOff, Phone, PhoneOff, Settings2, Activity } from 'lucide-react';
+import { Mic, MicOff, Phone, PhoneOff, Settings2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
+import type { Participant } from '../core/types';
 
 interface AudioSettingsProps {
   isJoined: boolean;
   isMicEnabled: boolean;
   onJoin: () => void;
   onToggleMic: () => void;
+  onEndCall: () => void;
   speakerLevels: Record<string, number>;
+  participants: Participant[];
 }
 
 const AudioSettings: React.FC<AudioSettingsProps> = ({
@@ -15,7 +18,9 @@ const AudioSettings: React.FC<AudioSettingsProps> = ({
   isMicEnabled,
   onJoin,
   onToggleMic,
-  speakerLevels
+  onEndCall,
+  speakerLevels,
+  participants
 }) => {
   return (
     <div className="absolute top-24 left-8 flex flex-col gap-2 z-50">
@@ -45,6 +50,7 @@ const AudioSettings: React.FC<AudioSettingsProps> = ({
           >
             <button
               onClick={onToggleMic}
+              title={isMicEnabled ? "Mute Microphone" : "Unmute Microphone"}
               className={`w-10 h-10 rounded-xl flex items-center justify-center transition-all ${
                 isMicEnabled 
                   ? 'bg-stone-900 text-white shadow-lg' 
@@ -54,6 +60,14 @@ const AudioSettings: React.FC<AudioSettingsProps> = ({
               {isMicEnabled ? <Mic className="w-4 h-4" /> : <MicOff className="w-4 h-4" />}
             </button>
             
+            <button
+              onClick={onEndCall}
+              title="End Call"
+              className="w-10 h-10 rounded-xl bg-red-500 text-white flex items-center justify-center hover:bg-red-600 transition-colors shadow-lg"
+            >
+              <PhoneOff className="w-4 h-4" />
+            </button>
+
             <div className="w-px h-6 bg-stone-200" />
             
             <div className="flex items-center gap-1 px-2">
@@ -83,18 +97,23 @@ const AudioSettings: React.FC<AudioSettingsProps> = ({
           animate={{ opacity: 1 }}
           className="flex flex-col gap-1 mt-2"
         >
-          {Object.entries(speakerLevels).map(([id, level]) => (
-            <div key={id} className="flex items-center gap-2 px-3 py-1 bg-white/40 border border-stone-100 rounded-full">
-              <div className="w-1.5 h-1.5 rounded-full bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.5)]" />
-              <span className="text-[9px] font-bold text-stone-500 uppercase tracking-tighter">Remote User</span>
-              <div className="flex-1 h-[2px] bg-stone-200 rounded-full overflow-hidden w-12">
-                <motion.div 
-                  className="h-full bg-stone-900" 
-                  animate={{ width: `${level}%` }} 
-                />
+          {Object.entries(speakerLevels).map(([id, level]) => {
+            const participant = participants.find(p => p.id === id);
+            if (!participant) return null;
+            
+            return (
+              <div key={id} className="flex items-center gap-2 px-3 py-1 bg-white/40 border border-stone-100 rounded-full">
+                <div className="w-1.5 h-1.5 rounded-full bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.5)]" />
+                <span className="text-[9px] font-bold text-stone-500 uppercase tracking-tighter">{participant.name}</span>
+                <div className="flex-1 h-[2px] bg-stone-200 rounded-full overflow-hidden w-12">
+                  <motion.div 
+                    className="h-full bg-stone-900" 
+                    animate={{ width: `${level}%` }} 
+                  />
+                </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </motion.div>
       )}
     </div>

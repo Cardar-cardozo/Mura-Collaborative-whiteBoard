@@ -1,13 +1,13 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Plus, Maximize, Minus, Download, Undo2, Redo2, Pencil, Eraser, Ruler as RulerIcon, Users, Trash2 } from 'lucide-react';
+import { Plus, Maximize, Minus, Download, Undo2, Redo2, Pencil, Eraser, Ruler as RulerIcon, Trash2 } from 'lucide-react';
 import StickyNote from './StickyNote';
 import Ruler from './Ruler';
 import DrawingCanvas from './DrawingCanvas';
 import CollaboratorList from './CollaboratorList';
 import Tooltip from './Tooltip';
 import AudioSettings from './AudioSettings';
-import { Note, Stroke, Point, Participant } from '../types';
+import { Note, Stroke, Participant } from '../types';
 import { toPng } from 'html-to-image';
 import { useWhiteboardAudio } from '../hooks/useWhiteboardAudio';
 
@@ -50,7 +50,6 @@ export default function Whiteboard({ groupName, leaderName }: WhiteboardProps) {
   const [localUserId] = useState(() => `user-${Math.random().toString(36).substr(2, 4)}`);
   const [remoteParticipants, setRemoteParticipants] = useState<Participant[]>([
     { id: 'lena', name: 'Lena', x: -400, y: -200 },
-    { id: 'marcus', name: 'Marcus', x: 600, y: 300 },
     { id: 'alex', name: 'Alex', x: 200, y: -500 }
   ]);
 
@@ -494,7 +493,6 @@ export default function Whiteboard({ groupName, leaderName }: WhiteboardProps) {
       <div className="absolute top-8 right-8 flex items-center -space-x-3">
         {[
           { color: '#D1D9CF', name: 'Lena' },
-          { color: '#F3EAC2', name: 'Marcus' },
           { color: '#D97706', name: 'Alex' }
         ].map((u, i) => (
           <Tooltip key={i} content={u.name} position="bottom">
