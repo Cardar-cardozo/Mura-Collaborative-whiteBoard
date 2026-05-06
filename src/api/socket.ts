@@ -73,6 +73,24 @@ class SocketService {
     }
   }
 
+  emitImageAdd(boardId: string, image: any) {
+    if (this.socket) {
+      this.socket.emit('image-add', { boardId, image });
+    }
+  }
+
+  emitImageUpdate(boardId: string, imageId: string, updates: any) {
+    if (this.socket) {
+      this.socket.emit('image-update', { boardId, imageId, updates });
+    }
+  }
+
+  emitImageDelete(boardId: string, imageId: string) {
+    if (this.socket) {
+      this.socket.emit('image-delete', { boardId, imageId });
+    }
+  }
+
   emitStrokeErase(boardId: string, strokeIds: string[]) {
     if (this.socket) {
       this.socket.emit('stroke-erase', { boardId, strokeIds });

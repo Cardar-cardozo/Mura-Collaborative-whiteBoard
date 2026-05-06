@@ -1,9 +1,3 @@
-/**
- * Eraser Tool Strategy
- *
- * Tests each completed stroke's points against the eraser cursor position and
- * removes matching strokes via useBoardStore. Pure logic — no React.
- */
 import type React from 'react';
 import type { CameraTransform, Stroke, EraserSettings } from '../../core/types';
 import { useBoardStore } from '../../store/useBoardStore';
@@ -31,12 +25,13 @@ export function eraserOnPointerDown(
   rect: DOMRect,
   transform: CameraTransform,
   eraser: EraserSettings
-): void {
-  if (e.button !== 0) return;
+): string[] {
+  if (e.button !== 0) return [];
   const { x, y } = screenToCanvas(e.clientX, e.clientY, rect, transform);
   const { strokes } = useBoardStore.getState();
   const ids = getErasedIds(strokes, x, y, eraser, transform);
   useBoardStore.getState().eraseStrokes(ids);
+  return ids;
 }
 
 export function eraserOnPointerMove(
@@ -44,13 +39,13 @@ export function eraserOnPointerMove(
   rect: DOMRect,
   transform: CameraTransform,
   eraser: EraserSettings
-): void {
-  if (!(e.buttons & 1)) return;
+): string[] {
+  if (!(e.buttons & 1)) return [];
   const { x, y } = screenToCanvas(e.clientX, e.clientY, rect, transform);
   const { strokes } = useBoardStore.getState();
   const ids = getErasedIds(strokes, x, y, eraser, transform);
   useBoardStore.getState().eraseStrokes(ids);
+  return ids;
 }
 
-// Eraser has no pointer-up action; included for API symmetry.
 export function eraserOnPointerUp(): void {}

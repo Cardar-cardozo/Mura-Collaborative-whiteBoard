@@ -34,7 +34,6 @@ export const useWhiteboardAudio = (
 
   const MAX_DISTANCE = 3000;
 
-  // ── Helper: Get/Create Audio Context ────────────────────────────────────────
   const getAudioContext = useCallback(() => {
     if (!audioContextRef.current) {
       audioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)();
@@ -45,7 +44,6 @@ export const useWhiteboardAudio = (
     return audioContextRef.current;
   }, []);
 
-  // ── Ringing Sound Logic ─────────────────────────────────────────────────────
   const startRinging = useCallback(() => {
     try {
       const ctx = getAudioContext();
@@ -80,7 +78,6 @@ export const useWhiteboardAudio = (
     }
   }, []);
 
-  // ── WebRTC Signaling ────────────────────────────────────────────────────────
   const setupSpatialAudio = useCallback((userId: string, stream: MediaStream) => {
     const ctx = getAudioContext();
     
@@ -173,7 +170,7 @@ export const useWhiteboardAudio = (
   const rejectCall = useCallback(() => {
     stopRinging();
     setIncomingCall(null);
-    // Notify the caller that you rejected? (Optional)
+
   }, [stopRinging]);
 
   const endCall = useCallback(() => {
@@ -207,7 +204,6 @@ export const useWhiteboardAudio = (
     }
   }, []);
 
-  // ── Signaling Listeners ─────────────────────────────────────────────────────
   useEffect(() => {
     const socket = socketService.getSocket();
     if (!socket) return;
@@ -218,7 +214,7 @@ export const useWhiteboardAudio = (
         setIncomingCall({ from, name: caller?.name || 'Someone' });
         startRinging();
       } else if (signal.type === 'leave-call') {
-        // If they were calling me, stop the ringing
+
         if (incomingCall?.from === from) {
           stopRinging();
           setIncomingCall(null);
@@ -235,7 +231,7 @@ export const useWhiteboardAudio = (
             node.panner.disconnect();
             spatialNodesRef.current.delete(from);
           }
-          // Update levels immediately
+
           setSpeakerLevels(prev => {
             const next = { ...prev };
             delete next[from];
@@ -263,7 +259,6 @@ export const useWhiteboardAudio = (
     };
   }, [isJoined, createPeerConnection, boardId, participants, startRinging, stopRinging, incomingCall]);
 
-  // Clean up
   useEffect(() => {
     const activeIds = new Set(participants.map(p => p.id));
     peerConnections.current.forEach((pc, id) => {
@@ -281,7 +276,6 @@ export const useWhiteboardAudio = (
     });
   }, [participants]);
 
-  // Spatial audio loop
   useEffect(() => {
     if (!isJoined || !audioContextRef.current || !isEnabled) return;
     const ctx = audioContextRef.current;
@@ -300,7 +294,6 @@ export const useWhiteboardAudio = (
     });
   }, [participants, localPos, isJoined, isEnabled]);
 
-  // Volume Monitoring
   useEffect(() => {
     if (!isJoined) return;
     const interval = setInterval(() => {
@@ -312,7 +305,7 @@ export const useWhiteboardAudio = (
         levels[id] = sum > 0 ? (sum / dataArray.length / 255) * 100 : 0;
       });
       setSpeakerLevels(prev => {
-         // Keep levels for existing nodes, merge with new ones
+
          return { ...levels };
       });
     }, 100);

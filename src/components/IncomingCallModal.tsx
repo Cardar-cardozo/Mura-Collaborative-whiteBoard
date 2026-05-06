@@ -18,7 +18,7 @@ const IncomingCallModal: React.FC<IncomingCallModalProps> = ({ callerName, onAcc
         className="w-full max-w-sm bg-white/90 backdrop-blur-2xl border border-stone-200 rounded-[32px] shadow-2xl pointer-events-auto overflow-hidden"
       >
         <div className="p-8 flex flex-col items-center text-center">
-          {/* Pulsing Avatar */}
+          {}
           <div className="relative mb-6">
             <motion.div
               animate={{ scale: [1, 1.2, 1], opacity: [0.3, 0.1, 0.3] }}
@@ -57,7 +57,7 @@ const IncomingCallModal: React.FC<IncomingCallModalProps> = ({ callerName, onAcc
           </div>
         </div>
         
-        {/* Animated Background Progress/Ringing Line */}
+        {}
         <motion.div 
           animate={{ x: ['-100%', '100%'] }}
           transition={{ repeat: Infinity, duration: 3, ease: "linear" }}

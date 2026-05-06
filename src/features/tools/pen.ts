@@ -1,9 +1,3 @@
-/**
- * Pen Tool Strategy
- *
- * Translates raw pointer events (screen coords) → canvas coords → Stroke data
- * and delegates to useBoardStore. Zero React state involved here.
- */
 import type React from 'react';
 import type { CameraTransform, BrushSettings } from '../../core/types';
 import { useBoardStore } from '../../store/useBoardStore';
@@ -44,6 +38,8 @@ export function penOnPointerMove(
   useBoardStore.getState().appendStrokePoint(x, y);
 }
 
-export function penOnPointerUp(): void {
-  useBoardStore.getState().commitStroke();
+import type { Stroke } from '../../core/types';
+
+export function penOnPointerUp(): Stroke | undefined {
+  return useBoardStore.getState().commitStroke();
 }

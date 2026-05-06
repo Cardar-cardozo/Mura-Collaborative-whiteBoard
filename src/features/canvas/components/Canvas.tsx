@@ -1,12 +1,3 @@
-/**
- * Canvas.tsx — Pure rendering engine
- *
- * Responsibilities:
- *  - Renders the dot-grid background, the SVG stroke layer, and all StickyNotes
- *  - Delegates ALL event handling to useCanvasEvents (strategy pattern)
- *  - Reads ONLY from Zustand stores — never accepts tool-related props
- *  - Never renders the Toolbar, panels, or any other DOM UI
- */
 import React, { useRef } from 'react';
 import { AnimatePresence, motion } from 'motion/react';
 import { useBoardStore } from '../../../store/useBoardStore';
@@ -17,6 +8,9 @@ import { useKeyboardShortcuts } from '../hooks/useKeyboardShortcuts';
 import { CANVAS_SVG_SIZE, CANVAS_SVG_OFFSET } from '../../../core/constants';
 import StickyNote from '../../../shared/ui/StickyNote';
 import Ruler from '../../../shared/ui/Ruler';
+import BoardImageComponent from '../../../shared/ui/BoardImage';
+import { useUpdateElement, useDeleteElement } from '../../../hooks/queries/useBoardQueries';
+import type { Note, BoardImage } from '../../../core/types';
 
 const Canvas: React.FC = () => {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -25,7 +19,6 @@ const Canvas: React.FC = () => {
 
   useKeyboardShortcuts();
 
-  // Store subscriptions
   const transform   = useViewStore(s => s.transform);
   const notes       = useBoardStore(s => s.notes);
   const strokes     = useBoardStore(s => s.strokes);
@@ -33,12 +26,40 @@ const Canvas: React.FC = () => {
   const appMode       = useUIStore(s => s.appMode);
   const eraserSettings = useUIStore(s => s.eraserSettings);
   const showRuler     = useUIStore(s => s.showRuler);
-  const rulerTransform = useUIStore(s => s.rulerTransform);
-  const setRulerTransform = useUIStore(s => s.setRulerTransform);
 
   const updateNote = useBoardStore(s => s.updateNote);
   const deleteNote = useBoardStore(s => s.deleteNote);
   const copyNote   = useBoardStore(s => s.copyNote);
+
+  const images      = useBoardStore(s => s.images);
+  const updateImage = useBoardStore(s => s.updateImage);
+  const deleteImage = useBoardStore(s => s.deleteImage);
+
+  const boardId = useBoardStore(s => s.boardId);
+  const authorName = useBoardStore(s => s.authorName);
+
+  const { mutate: mutateUpdate } = useUpdateElement();
+  const { mutate: mutateDelete } = useDeleteElement();
+
+  const handleUpdateNote = (id: string, updates: Partial<Note>) => {
+    const updated = updateNote(id, updates);
+    if (updated && boardId) mutateUpdate({ boardId, elementType: 'note', data: updated, author: authorName || 'Guest' });
+  };
+
+  const handleDeleteNote = (id: string) => {
+    deleteNote(id);
+    if (boardId) mutateDelete({ boardId, id });
+  };
+
+  const handleUpdateImage = (id: string, updates: Partial<BoardImage>) => {
+    const updated = updateImage(id, updates);
+    if (updated && boardId) mutateUpdate({ boardId, elementType: 'image', data: updated, author: authorName || 'Guest' });
+  };
+
+  const handleDeleteImage = (id: string) => {
+    deleteImage(id);
+    if (boardId) mutateDelete({ boardId, id });
+  };
 
   return (
     <div
@@ -52,7 +73,7 @@ const Canvas: React.FC = () => {
       onMouseUp={handlePointerUp}
       onMouseLeave={handlePointerUp}
     >
-      {/* ── Eraser cursor overlay ─────────────────────────────────────────── */}
+      {}
       {appMode === 'eraser' && (
         <div
           className={`absolute pointer-events-none border-2 border-stone-400 bg-white/20 backdrop-blur-[1px] shadow-sm z-[100] ${
@@ -68,7 +89,7 @@ const Canvas: React.FC = () => {
         />
       )}
 
-      {/* ── Background dot-grid (follows camera) ─────────────────────────── */}
+      {}
       <div
         className="absolute inset-0 canvas-grid pointer-events-none"
         style={{
@@ -77,7 +98,7 @@ const Canvas: React.FC = () => {
         }}
       />
 
-      {/* ── Infinite surface ─────────────────────────────────────────────── */}
+      {}
       <div
         id="canvas-surface"
         className="absolute inset-0"
@@ -86,7 +107,7 @@ const Canvas: React.FC = () => {
           transformOrigin: '0 0',
         }}
       >
-        {/* SVG stroke layer */}
+        {}
         <svg
           className="absolute inset-0 pointer-events-none"
           style={{
@@ -125,30 +146,36 @@ const Canvas: React.FC = () => {
           )}
         </svg>
 
-        {/* Sticky notes */}
+        {}
+        {images.map(image => (
+          <BoardImageComponent
+            key={image.id}
+            image={image}
+            onUpdate={handleUpdateImage}
+            onDelete={handleDeleteImage}
+            zoom={transform.scale}
+          />
+        ))}
+
+        {}
         <AnimatePresence>
           {notes.map(note => (
             <StickyNote
               key={note.id}
               note={note}
-              onUpdate={updateNote}
-              onDelete={deleteNote}
+              onUpdate={handleUpdateNote}
+              onDelete={handleDeleteNote}
               onCopy={() => copyNote(note)}
-              onSelect={() => updateNote(note.id, { rotation: note.rotation + (Math.random() * 2 - 1) })}
+              onSelect={() => handleUpdateNote(note.id, { rotation: note.rotation + (Math.random() * 2 - 1) })}
               zoom={transform.scale}
             />
           ))}
         </AnimatePresence>
 
-        {/* Ruler (lives on the surface so it scales with zoom) */}
-        {showRuler && (
-          <Ruler
-            transform={rulerTransform}
-            onUpdate={setRulerTransform}
-            zoom={transform.scale}
-          />
-        )}
       </div>
+
+      {}
+      {showRuler && <Ruler />}
     </div>
   );
 };

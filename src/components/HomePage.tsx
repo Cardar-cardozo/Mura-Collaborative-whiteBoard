@@ -20,7 +20,7 @@ const HomePage: React.FC = () => {
     e.preventDefault();
     setIsSubmitting(true);
     try {
-      // Create the board via backend API
+
       const { boardService } = await import('../api/board.service');
       const board = await boardService.createBoard(formData.groupName, formData.leaderName);
       setCreatedBoardId(board._id);

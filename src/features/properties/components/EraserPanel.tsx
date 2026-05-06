@@ -4,7 +4,7 @@ import { useUIStore } from '../../../store/useUIStore';
 import { ERASER_SIZES, ERASER_SHAPES } from '../../../core/constants';
 
 const EraserPanel: React.FC = () => {
-  // Separate selectors — avoid inline object literals that cause getSnapshot loops
+
   const eraserSettings    = useUIStore(s => s.eraserSettings);
   const setEraserSettings = useUIStore(s => s.setEraserSettings);
 
@@ -15,7 +15,7 @@ const EraserPanel: React.FC = () => {
       exit={{ opacity: 0, y: 20 }}
       className="absolute bottom-28 left-1/2 -translate-x-1/2 flex flex-col gap-4 p-4 bg-white border border-black/5 rounded-2xl shadow-xl z-50 min-w-[280px]"
     >
-      {/* Size picker */}
+      {}
       <div className="flex flex-col gap-2">
         <span className="text-[10px] font-bold uppercase tracking-widest text-stone-400">Eraser Size</span>
         <div className="flex items-center gap-4">
@@ -36,7 +36,7 @@ const EraserPanel: React.FC = () => {
         </div>
       </div>
 
-      {/* Shape picker */}
+      {}
       <div className="flex flex-col gap-2">
         <span className="text-[10px] font-bold uppercase tracking-widest text-stone-400">Eraser Shape</span>
         <div className="flex gap-2">

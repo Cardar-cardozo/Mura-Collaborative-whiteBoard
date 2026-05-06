@@ -1,11 +1,4 @@
 import type React from 'react';
-/**
- * useCanvasEvents
- *
- * Decouples pointer / wheel event handling from React rendering.
- * Uses `useRef` reads of the store (via `.getState()`) inside the handlers so
- * the callbacks are never stale — meaning this hook only needs to mount once.
- */
 import { useCallback, useRef, useState } from 'react';
 import { useViewStore } from '../../../store/useViewStore';
 import { useUIStore } from '../../../store/useUIStore';
@@ -13,9 +6,15 @@ import { penOnPointerDown, penOnPointerMove, penOnPointerUp } from '../../tools/
 import { eraserOnPointerDown, eraserOnPointerMove, eraserOnPointerUp } from '../../tools/shapes';
 import { selectOnPointerDown, selectOnPointerMove, selectOnPointerUp } from '../../tools/select';
 import type { SelectPointerState } from '../../tools/select';
+import { useBoardStore } from '../../../store/useBoardStore';
+import { useCreateElement, useDeleteElements } from '../../../hooks/queries/useBoardQueries';
 
 export function useCanvasEvents(containerRef: React.RefObject<HTMLDivElement | null>) {
-  // Track eraser cursor position for the visual overlay (DOM-level state, fine in React)
+  const { mutate: createElement } = useCreateElement();
+  const { mutate: deleteElements } = useDeleteElements();
+  const boardId = useBoardStore(s => s.boardId);
+  const authorName = useBoardStore(s => s.authorName);
+
   const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
   const selectState = useRef<SelectPointerState>({ isPanning: false });
 
@@ -36,7 +35,8 @@ export function useCanvasEvents(containerRef: React.RefObject<HTMLDivElement | n
     if (appMode === 'pen' && rect) {
       penOnPointerDown(e, rect, transform, brushSettings);
     } else if (appMode === 'eraser' && rect) {
-      eraserOnPointerDown(e, rect, transform, eraserSettings);
+      const ids = eraserOnPointerDown(e, rect, transform, eraserSettings);
+      if (ids.length > 0 && boardId) deleteElements({ boardId, ids });
     } else {
       selectState.current = selectOnPointerDown(e, transform);
     }
@@ -52,7 +52,8 @@ export function useCanvasEvents(containerRef: React.RefObject<HTMLDivElement | n
     if (appMode === 'pen' && rect) {
       penOnPointerMove(e, rect, transform);
     } else if (appMode === 'eraser' && rect) {
-      eraserOnPointerMove(e, rect, transform, eraserSettings);
+      const ids = eraserOnPointerMove(e, rect, transform, eraserSettings);
+      if (ids.length > 0 && boardId) deleteElements({ boardId, ids });
     } else {
       selectState.current = selectOnPointerMove(e, selectState.current);
     }
@@ -62,7 +63,10 @@ export function useCanvasEvents(containerRef: React.RefObject<HTMLDivElement | n
     const { appMode } = useUIStore.getState();
 
     if (appMode === 'pen') {
-      penOnPointerUp();
+      const finalStroke = penOnPointerUp();
+      if (finalStroke && boardId) {
+        createElement({ boardId, elementType: 'stroke', data: finalStroke, author: authorName || 'Guest' });
+      }
     } else if (appMode === 'eraser') {
       eraserOnPointerUp();
     } else {

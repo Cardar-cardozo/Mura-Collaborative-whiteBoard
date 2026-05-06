@@ -1,22 +1,21 @@
 import { create } from 'zustand';
-import type { Note, Stroke, BoardSnapshot } from '../core/types';
+import type { Note, Stroke, BoardSnapshot, BoardImage } from '../core/types';
 import { MAX_HISTORY_SIZE, NOTE_COLORS } from '../core/constants';
 import { randomId } from '../lib/math';
 import { socketService } from '../api/socket';
-import { elementService } from '../api/element.service';
+
 
 interface BoardState {
   boardId: string | null;
   boardName: string;
-  // ─── Elements ─────────────────────────────────────────────────────────────
+
   notes: Note[];
   strokes: Stroke[];
+  images: BoardImage[];
   currentStroke: Stroke | null;
 
-  // ─── Participants ─────────────────────────────────────────────────────────
   participants: import('../core/types').Participant[];
 
-  // ─── History ──────────────────────────────────────────────────────────────
   history: BoardSnapshot[];
   redoStack: BoardSnapshot[];
 
@@ -24,42 +23,42 @@ interface BoardState {
   authorName: string | null;
   leaderName: string | null;
 
-  // ─── Actions ──────────────────────────────────────────────────────────────
   initBoard: (boardId: string, authorName: string) => Promise<void>;
   disconnect: () => void;
   setAuthorName: (name: string) => void;
-  /** Snapshot current state before a destructive action */
+  
   saveToHistory: () => void;
 
-  // Notes
-  addNote: (transform: { x: number; y: number; scale: number }) => void;
-  updateNote: (id: string, updates: Partial<Note>) => void;
+  addNote: (transform: { x: number; y: number; scale: number }) => Note;
+  updateNote: (id: string, updates: Partial<Note>) => Note | undefined;
   deleteNote: (id: string) => void;
   copyNote: (note: Note) => void;
-  pasteNote: () => void;
+  pasteNote: () => Note | undefined;
 
-  // Strokes
   beginStroke: (stroke: Stroke) => void;
   appendStrokePoint: (x: number, y: number) => void;
-  commitStroke: () => void;
+  commitStroke: () => Stroke | undefined;
   eraseStrokes: (ids: string[]) => void;
 
-  // Remote Actions (don't emit back to socket)
+  addImage: (image: BoardImage) => BoardImage;
+  updateImage: (id: string, updates: Partial<BoardImage>) => BoardImage | undefined;
+  deleteImage: (id: string) => void;
+  remoteAddImage: (image: BoardImage) => void;
+
   remoteAddNote: (note: Note) => void;
   remoteUpdateNote: (id: string, updates: Partial<Note>) => void;
   remoteDeleteNote: (id: string) => void;
   remoteAddStroke: (stroke: Stroke) => void;
   remoteClearBoard: () => void;
   remoteEraseStrokes: (ids: string[]) => void;
-  remoteSetElements: (notes: Note[], strokes: Stroke[]) => void;
+  remoteSetElements: (notes: Note[], strokes: Stroke[], images?: BoardImage[]) => void;
   updateParticipant: (id: string, updates: Partial<import('../core/types').Participant>) => void;
   removeParticipant: (id: string) => void;
+  setBoardInfo: (name: string, leader: string) => void;
 
-  // History
   undo: () => void;
   redo: () => void;
 
-  // Bulk reset
   clearAll: () => void;
 }
 
@@ -68,6 +67,7 @@ export const useBoardStore = create<BoardState>()((set, get) => ({
   boardName: 'Workspace',
   notes: [],
   strokes: [],
+  images: [],
   currentStroke: null,
   participants: [],
   history: [],
@@ -78,20 +78,10 @@ export const useBoardStore = create<BoardState>()((set, get) => ({
 
   initBoard: async (boardId, authorName) => {
     set({ boardId, authorName });
-    
-    try {
-      const { boardService } = await import('../api/board.service');
-      const board = await boardService.getBoardById(boardId);
-      if (board) set({ boardName: board.name, leaderName: board.leaderName });
-    } catch (e) {
-      console.error('Failed to fetch board details', e);
-    }
 
-    // Connect to WebSocket
     const socket = socketService.connect();
     socketService.joinBoard(boardId, authorName);
 
-    // Setup Socket Listeners
     socket.off('stroke-drawn');
     socket.off('board-cleared');
     socket.off('board-reverted');
@@ -117,18 +107,14 @@ export const useBoardStore = create<BoardState>()((set, get) => ({
     });
 
     socket.on('board-reverted', async () => {
-      // Re-fetch elements
-      const elements = await elementService.getElementsByBoardId(boardId);
-      const notes = elements.filter(e => e.elementType === 'note').map(e => e.data);
-      const strokes = elements.filter(e => e.elementType === 'stroke').map(e => e.data);
-      get().remoteSetElements(notes, strokes);
+      // Revert event received. TanStack Query should refetch.
+      // We don't fetch elements here anymore.
     });
 
     socket.on('user-joined', ({ id, username }: { id: string, username: string }) => {
-      // Add participant
+
       get().updateParticipant(id, { id, name: username, x: 0, y: 0 });
-      
-      // Play a soft join "pop" via Web Audio API
+
       try {
         const ctx = new AudioContext();
         const osc = ctx.createOscillator();
@@ -143,7 +129,7 @@ export const useBoardStore = create<BoardState>()((set, get) => ({
         osc.start();
         osc.stop(ctx.currentTime + 0.3);
       } catch (e) {
-        // AudioContext not available — no-op
+
       }
     });
 
@@ -155,7 +141,6 @@ export const useBoardStore = create<BoardState>()((set, get) => ({
       get().updateParticipant(id, { id, x, y, ...(username && { name: username }) });
     });
 
-    // Note real-time sync
     socket.on('note-added', (note: Note) => {
       get().remoteAddNote(note);
     });
@@ -168,15 +153,21 @@ export const useBoardStore = create<BoardState>()((set, get) => ({
       get().remoteDeleteNote(noteId);
     });
 
-    // Fetch initial elements
-    try {
-      const elements = await elementService.getElementsByBoardId(boardId);
-      const notes = elements.filter(e => e.elementType === 'note').map(e => e.data);
-      const strokes = elements.filter(e => e.elementType === 'stroke').map(e => e.data);
-      get().remoteSetElements(notes, strokes);
-    } catch (e) {
-      console.error('Failed to fetch elements', e);
-    }
+    socket.on('image-added', (image: BoardImage) => {
+      get().remoteAddImage(image);
+    });
+
+    socket.on('image-updated', ({ imageId, updates }: { imageId: string; updates: Partial<BoardImage> }) => {
+
+      set(s => ({ images: s.images.map(img => img.id === imageId ? { ...img, ...updates } : img) }));
+    });
+
+    socket.on('image-deleted', ({ imageId }: { imageId: string }) => {
+
+      set(s => ({ images: s.images.filter(img => img.id !== imageId) }));
+    });
+
+    // Initial elements are now fetched by TanStack Query and passed via remoteSetElements
   },
 
   disconnect: () => {
@@ -186,16 +177,14 @@ export const useBoardStore = create<BoardState>()((set, get) => ({
 
   setAuthorName: (name) => set({ authorName: name }),
 
-  // ── Helpers ──────────────────────────────────────────────────────────
   saveToHistory() {
-    const { notes, strokes, history } = get();
+    const { notes, strokes, images, history } = get();
     set({
-      history: [...history.slice(-(MAX_HISTORY_SIZE - 1)), { notes, strokes }],
+      history: [...history.slice(-(MAX_HISTORY_SIZE - 1)), { notes, strokes, images }],
       redoStack: [],
     });
   },
 
-  // ── Note actions ─────────────────────────────────────────────────────
   addNote(transform) {
     get().saveToHistory();
     const newNote: Note = {
@@ -212,11 +201,9 @@ export const useBoardStore = create<BoardState>()((set, get) => ({
     
     const boardId = get().boardId;
     if (boardId) {
-      // Real-time broadcast
       socketService.emitNoteAdd(boardId, newNote);
-      // Persist to DB
-      elementService.bulkCreateElements([{ boardId, elementType: 'note', data: newNote, author: get().authorName || 'Guest' }]);
     }
+    return newNote;
   },
 
   updateNote(id, updates) {
@@ -230,13 +217,9 @@ export const useBoardStore = create<BoardState>()((set, get) => ({
     const boardId = get().boardId;
     const note = updatedNotes.find(n => n.id === id);
     if (boardId) {
-      // Always broadcast all changes in real-time (text, position, color, lock)
       socketService.emitNoteUpdate(boardId, id, updates);
-      // Persist content and lock changes to DB (avoid DB writes on every drag frame)
-      if (note && significantChange && !('x' in updates) && !('y' in updates)) {
-        elementService.bulkCreateElements([{ boardId, elementType: 'note', data: note, author: get().authorName || 'Guest' }]);
-      }
     }
+    return note;
   },
 
   deleteNote(id) {
@@ -245,7 +228,6 @@ export const useBoardStore = create<BoardState>()((set, get) => ({
     const boardId = get().boardId;
     if (boardId) {
       socketService.emitNoteDelete(boardId, id);
-      elementService.deleteElements(boardId, [id]);
     }
   },
 
@@ -255,7 +237,7 @@ export const useBoardStore = create<BoardState>()((set, get) => ({
 
   pasteNote() {
     const { copiedNote } = get();
-    if (!copiedNote) return;
+    if (!copiedNote) return undefined;
     get().saveToHistory();
     const newNote: Note = {
       ...copiedNote,
@@ -269,14 +251,56 @@ export const useBoardStore = create<BoardState>()((set, get) => ({
     
     const boardId = get().boardId;
     if (boardId) {
-      // Real-time broadcast
       socketService.emitNoteAdd(boardId, newNote);
-      // Persist to DB
-      elementService.bulkCreateElements([{ boardId, elementType: 'note', data: newNote, author: get().authorName || 'Guest' }]);
+    }
+    return newNote;
+  },
+
+  addImage(image) {
+    get().saveToHistory();
+    set(s => ({ images: [...s.images, image] }));
+
+    const boardId = get().boardId;
+    if (boardId) {
+      socketService.emitImageAdd(boardId, image);
+    }
+    return image;
+  },
+
+  updateImage(id, updates) {
+    let updatedImage: BoardImage | undefined;
+    set(s => {
+      const nextImages = s.images.map(img => {
+        if (img.id === id) {
+          updatedImage = { ...img, ...updates };
+          return updatedImage;
+        }
+        return img;
+      });
+      return { images: nextImages };
+    });
+
+    const boardId = get().boardId;
+    if (boardId && updatedImage) {
+      socketService.emitImageUpdate(boardId, id, updates);
+    }
+    return updatedImage;
+  },
+
+  deleteImage(id) {
+    get().saveToHistory();
+    set(s => ({ images: s.images.filter(img => img.id !== id) }));
+
+    const boardId = get().boardId;
+    if (boardId) {
+      socketService.emitImageDelete(boardId, id);
     }
   },
 
-  // ── Stroke actions ───────────────────────────────────────────────────
+  remoteAddImage(image) {
+    set(s => ({ images: [...s.images.filter(i => i.id !== image.id), image] }));
+  },
+
   beginStroke(stroke) {
     set({ currentStroke: stroke });
   },
@@ -291,7 +315,7 @@ export const useBoardStore = create<BoardState>()((set, get) => ({
 
   commitStroke() {
     const { currentStroke, boardId, authorName } = get();
-    if (!currentStroke) return;
+    if (!currentStroke) return undefined;
     get().saveToHistory();
     
     const finalStroke = { ...currentStroke, author: authorName || undefined };
@@ -301,11 +325,9 @@ export const useBoardStore = create<BoardState>()((set, get) => ({
     }));
 
     if (boardId) {
-      // Real-time emit
       socketService.emitStrokeDraw(boardId, finalStroke);
-      // Persist to DB
-      elementService.bulkCreateElements([{ boardId, elementType: 'stroke', data: finalStroke, author: authorName || 'Guest' }]);
     }
+    return finalStroke;
   },
 
   eraseStrokes(ids) {
@@ -316,11 +338,9 @@ export const useBoardStore = create<BoardState>()((set, get) => ({
     const boardId = get().boardId;
     if (boardId) {
       socketService.emitStrokeErase(boardId, ids);
-      elementService.deleteElements(boardId, ids);
     }
   },
 
-  // ── Remote Actions ───────────────────────────────────────────────────
   remoteAddNote(note) {
     set(s => ({ notes: [...s.notes.filter(n => n.id !== note.id), note] }));
   },
@@ -334,23 +354,26 @@ export const useBoardStore = create<BoardState>()((set, get) => ({
     set(s => ({ strokes: [...s.strokes.filter(st => st.id !== stroke.id), stroke] }));
   },
   remoteClearBoard() {
-    set({ notes: [], strokes: [] });
+    set({ notes: [], strokes: [], images: [] });
   },
   remoteEraseStrokes(ids) {
     set(s => ({ strokes: s.strokes.filter(st => !ids.includes(st.id)) }));
   },
-  remoteSetElements(notes, strokes) {
-    set({ notes, strokes });
+  remoteSetElements(notes, strokes, images = []) {
+    set({ notes, strokes, images });
   },
 
-  // ── Participants ─────────────────────────────────────────────────────
+  setBoardInfo(name, leader) {
+    set({ boardName: name, leaderName: leader });
+  },
+
   updateParticipant(id, updates) {
     set(s => {
       const exists = s.participants.some(p => p.id === id);
       if (exists) {
         return { participants: s.participants.map(p => p.id === id ? { ...p, ...updates } : p) };
       } else {
-        // If it doesn't exist and we have the necessary info, add it
+
         if (updates.name !== undefined) {
            return { participants: [...s.participants, { id, name: updates.name, x: updates.x || 0, y: updates.y || 0 }] };
         }
@@ -363,40 +386,40 @@ export const useBoardStore = create<BoardState>()((set, get) => ({
     set(s => ({ participants: s.participants.filter(p => p.id !== id) }));
   },
 
-  // ── History ──────────────────────────────────────────────────────────
   undo() {
-    const { history, notes, strokes, redoStack } = get();
+    const { history, notes, strokes, images, redoStack } = get();
     if (history.length === 0) return;
     const prev = history[history.length - 1];
     set({
       notes: prev.notes,
       strokes: prev.strokes,
+      images: prev.images ?? [],
       history: history.slice(0, -1),
-      redoStack: [...redoStack, { notes, strokes }],
+      redoStack: [...redoStack, { notes, strokes, images }],
     });
   },
 
   redo() {
-    const { redoStack, notes, strokes, history } = get();
+    const { redoStack, notes, strokes, images, history } = get();
     if (redoStack.length === 0) return;
     const next = redoStack[redoStack.length - 1];
     set({
       notes: next.notes,
       strokes: next.strokes,
+      images: next.images ?? [],
       redoStack: redoStack.slice(0, -1),
-      history: [...history, { notes, strokes }],
+      history: [...history, { notes, strokes, images }],
     });
   },
 
-  // ── Clear ─────────────────────────────────────────────────────────────
   clearAll() {
     get().saveToHistory();
-    set({ notes: [], strokes: [] });
+    set({ notes: [], strokes: [], images: [] });
     
     const boardId = get().boardId;
     if (boardId) {
       socketService.emitClearBoard(boardId);
-      // Backend clear board endpoint if available, else this relies on creating a snapshot or is transient
+
     }
   },
 }));

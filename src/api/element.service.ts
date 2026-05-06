@@ -3,7 +3,7 @@ import { apiClient } from './client';
 export interface Element {
   _id?: string;
   boardId: string;
-  elementType: 'note' | 'stroke';
+  elementType: 'note' | 'stroke' | 'image';
   data: any;
   author?: string;
   createdAt?: string;

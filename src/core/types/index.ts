@@ -1,4 +1,4 @@
-// ─── Core Domain Types ────────────────────────────────────────────────────────
+
 
 export interface Point {
   x: number;
@@ -32,14 +32,27 @@ export interface Participant {
   y: number;
 }
 
-// ─── Board State Snapshot (for undo/redo) ────────────────────────────────────
+export interface BoardImage {
+  id: string;
+  x: number;
+  y: number;
+  
+  width: number;
+  
+  height: number;
+  
+  url: string;
+  rotation: number;
+  originalWidth?: number;
+  originalHeight?: number;
+  author?: string;
+}
 
 export interface BoardSnapshot {
   notes: Note[];
   strokes: Stroke[];
+  images: BoardImage[];
 }
-
-// ─── View / Camera ────────────────────────────────────────────────────────────
 
 export interface CameraTransform {
   x: number;
@@ -47,9 +60,7 @@ export interface CameraTransform {
   scale: number;
 }
 
-// ─── Tool Definitions ─────────────────────────────────────────────────────────
-
-export type AppMode = 'select' | 'pen' | 'eraser';
+export type AppMode = 'select' | 'pen' | 'eraser' | 'image';
 
 export interface BrushSettings {
   color: string;

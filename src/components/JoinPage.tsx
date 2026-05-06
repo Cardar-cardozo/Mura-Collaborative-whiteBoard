@@ -34,7 +34,7 @@ const JoinPage: React.FC = () => {
     if (!participantName.trim()) return;
     
     setIsSubmitting(true);
-    // Redirect to the workspace with the participant name in the query string
+
     navigate(`/workspace/${boardId}?participant=${encodeURIComponent(participantName.trim())}`);
   };
 

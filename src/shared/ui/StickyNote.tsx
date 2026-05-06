@@ -19,7 +19,6 @@ const StickyNote: React.FC<StickyNoteProps> = ({ note, onUpdate, onDelete, onCop
   const x = useMotionValue(note.x);
   const y = useMotionValue(note.y);
 
-  // Sync motion values with props for remote updates
   React.useEffect(() => {
     x.set(note.x);
     y.set(note.y);
@@ -46,7 +45,7 @@ const StickyNote: React.FC<StickyNoteProps> = ({ note, onUpdate, onDelete, onCop
 
   const handleDragEnd = (_: any, info: any) => {
     if (note.isLocked) return;
-    // Final authoritative position commit
+
     onUpdate(note.id, {
       x: startPosRef.current.x + info.offset.x / zoom,
       y: startPosRef.current.y + info.offset.y / zoom,

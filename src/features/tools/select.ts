@@ -28,5 +28,5 @@ export function selectOnPointerMove(
 }
 
 export function selectOnPointerUp(_e: React.MouseEvent, _state: SelectPointerState): void {
-  // Panning state is reset by the caller; nothing extra needed here.
+
 }

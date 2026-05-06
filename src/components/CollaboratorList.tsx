@@ -21,7 +21,7 @@ const CollaboratorList: React.FC<CollaboratorListProps> = ({
       <div className="flex flex-col gap-1 items-end">
         <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-stone-400 mr-2 mb-1">Collaborators</span>
         
-        {/* Local User */}
+        {}
         <motion.div 
           initial={{ opacity: 0, x: 20 }}
           animate={{ opacity: 1, x: 0 }}
@@ -36,7 +36,7 @@ const CollaboratorList: React.FC<CollaboratorListProps> = ({
           </div>
         </motion.div>
 
-        {/* Remote Users */}
+        {}
         <AnimatePresence>
           {participants.map((p) => {
             const level = speakerLevels[p.id] || 0;

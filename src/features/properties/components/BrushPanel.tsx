@@ -4,8 +4,7 @@ import { useUIStore } from '../../../store/useUIStore';
 import { BRUSH_COLORS, BRUSH_WIDTHS, BRUSH_STYLES } from '../../../core/constants';
 
 const BrushPanel: React.FC = () => {
-  // Use separate selectors — a combined object selector returns a new reference
-  // on every call, which triggers Zustand's getSnapshot infinite-loop warning.
+
   const brushSettings    = useUIStore(s => s.brushSettings);
   const setBrushSettings = useUIStore(s => s.setBrushSettings);
 
@@ -16,7 +15,7 @@ const BrushPanel: React.FC = () => {
       exit={{ opacity: 0, y: 20 }}
       className="absolute bottom-28 left-1/2 -translate-x-1/2 flex flex-col gap-4 p-4 bg-white border border-black/5 rounded-2xl shadow-xl z-50 min-w-[280px]"
     >
-      {/* Color picker */}
+      {}
       <div className="flex flex-col gap-2">
         <span className="text-[10px] font-bold uppercase tracking-widest text-stone-400">Brush Color</span>
         <div className="flex gap-2">
@@ -33,7 +32,7 @@ const BrushPanel: React.FC = () => {
         </div>
       </div>
 
-      {/* Size picker */}
+      {}
       <div className="flex flex-col gap-2">
         <span className="text-[10px] font-bold uppercase tracking-widest text-stone-400">Brush Size</span>
         <div className="flex items-center gap-4">
@@ -51,7 +50,7 @@ const BrushPanel: React.FC = () => {
         </div>
       </div>
 
-      {/* Style picker */}
+      {}
       <div className="flex flex-col gap-2">
         <span className="text-[10px] font-bold uppercase tracking-widest text-stone-400">Line Style</span>
         <div className="flex gap-2">

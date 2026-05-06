@@ -6,13 +6,11 @@ import { clamp } from '../lib/math';
 interface ViewState {
   transform: CameraTransform;
 
-  // Atomic setters (prevents stale-closure issues in event handlers)
   pan: (dx: number, dy: number) => void;
   zoomBy: (delta: number) => void;
   zoomTo: (scale: number) => void;
   setTransform: (t: Partial<CameraTransform>) => void;
 
-  // Wheel event handler: handles both pinch-zoom and scroll-pan
   handleWheel: (deltaX: number, deltaY: number, isZoom: boolean) => void;
 }
 
