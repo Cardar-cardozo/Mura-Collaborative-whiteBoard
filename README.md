@@ -21,10 +21,17 @@ Mura is a high-performance, real-time collaborative whiteboard application built
 **Frontend:**
 - React 18 + TypeScript
 - Vite
-- Zustand (State Management)
+- Zustand (Client/Transient State & UI)
+- TanStack React Query (Server State & API Caching)
 - Framer Motion (Animations & Drag Logic)
 - Tailwind CSS (Styling)
-- Socket.io-client (Real-time events)
+- Socket.io-client (Real-time Events)
+
+**Architecture Details:**
+Mura employs a strict separation of concerns for state management:
+- **Client State (Zustand):** Handles all high-frequency, transient UI updates (like 60fps canvas dragging, optimistic local changes, and tool selection) to ensure zero perceived latency.
+- **Server State (TanStack Query):** Handles all asynchronous HTTP REST operations, robust data fetching, caching, loading states, and backend synchronization.
+- **Real-Time Sync (Socket.io):** Handles volatile, high-frequency cursor tracking and broadcasts peer-to-peer drawing events to ensure instantaneous collaborative feedback.
 
 **Backend:**
 - NestJS
